@@ -31,28 +31,29 @@ setup(
     author_email='johannes@bornhold.name',
     url='https://github.com/johbo/johbo-pytest-sqlalchemy',
     packages=[
-        'johbo-pytest-sqlalchemy',
+        'johbo_pytest_sqlalchemy',
     ],
     package_dir={'johbo-pytest-sqlalchemy':
                  'johbo-pytest-sqlalchemy'},
     include_package_data=True,
     install_requires=requirements,
-    license="ISCL",
+    license="TODO",
     zip_safe=False,
-    keywords='johbo-pytest-sqlalchemy',
+    keywords='',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: ISC License (ISCL)',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
     test_suite='tests',
-    tests_require=test_requirements
+    tests_require=test_requirements,
+    entry_points = {
+        'pytest11': [
+            'johbo_pytest_sqlalchemy = johbo_pytest_sqlalchemy',
+        ]
+    },
 )
