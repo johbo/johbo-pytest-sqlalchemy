@@ -33,8 +33,8 @@ setup(
     packages=[
         'johbo_pytest_sqlalchemy',
     ],
-    package_dir={'johbo-pytest-sqlalchemy':
-                 'johbo-pytest-sqlalchemy'},
+    package_dir={'johbo_pytest_sqlalchemy':
+                 'johbo_pytest_sqlalchemy'},
     include_package_data=True,
     install_requires=requirements,
     license="TODO",
@@ -53,7 +53,7 @@ setup(
     tests_require=test_requirements,
     entry_points = {
         'pytest11': [
-            'johbo_pytest_sqlalchemy = johbo_pytest_sqlalchemy',
+            'johbo_pytest_sqlalchemy = johbo_pytest_sqlalchemy.pytest_plugin',
         ]
     },
 )
