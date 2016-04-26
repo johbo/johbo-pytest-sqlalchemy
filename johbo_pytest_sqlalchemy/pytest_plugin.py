@@ -4,6 +4,16 @@ import pytest
 import sqlalchemy
 
 
+def pytest_addoption(parser):
+    parser.addini(
+        name="drop_existing_test_db",
+        help=(
+            "If set to True, an existing database with the test database "
+            "name will be dropped."),
+        type="bool",
+        default=False)
+
+
 @pytest.fixture(scope='session')
 def testing_db(request, testing_db_url):
     """
@@ -11,9 +21,11 @@ def testing_db(request, testing_db_url):
 
     Returns an instance of "TestingDB".
     """
-    test_db = TestingDB(base_db_url=testing_db_url)
+    test_db = TestingDB(
+        base_db_url=testing_db_url,
+        drop_existing=request.config.getini('drop_existing_test_db'))
     test_db.create()
-    request.addfinalizer(test_db.drop())
+    request.addfinalizer(test_db.drop)
     return test_db
 
 
@@ -27,10 +39,10 @@ class TestingDB:
 
     TEST_DB_PREFIX = "test_"
 
-    def __init__(self, base_db_url):
+    def __init__(self, base_db_url, drop_existing=False):
         self._base_db_url = self._to_url(base_db_url)
         self._db_url = self._create_test_url()
-        self._engine = sqlalchemy.create_engine(self._base_db_url)
+        self._drop_existing = drop_existing
 
     @property
     def url(self):
@@ -38,7 +50,17 @@ class TestingDB:
 
     def create(self):
         with self.connect() as conn:
+            if self._drop_existing:
+                self._try_drop(conn)
             conn.execute("CREATE DATABASE {}".format(self._db_url.database))
+
+    def _try_drop(self, conn):
+        try:
+            conn.execute("DROP DATABASE {}".format(self._db_url.database))
+        except sqlalchemy.exc.ProgrammingError:
+            pass
+        finally:
+            conn.execute("ROLLBACK")
 
     def drop(self):
         with self.connect() as conn:
@@ -55,6 +77,8 @@ class TestingDB:
         engine.dispose()
 
     def _to_url(self, url):
+        # Ensure to create a copy actually
+        url = str(url)
         return sqlalchemy.engine.url.make_url(url)
 
     def _create_test_url(self):
