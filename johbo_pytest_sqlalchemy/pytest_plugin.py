@@ -15,18 +15,32 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope='session')
-def testing_db(request, testing_db_url):
+def test_db(request, test_db_url):
     """
     Create a testing database for the test session.
 
     Returns an instance of "TestingDB".
     """
     test_db = TestingDB(
-        base_db_url=testing_db_url,
+        base_db_url=test_db_url,
         drop_existing=request.config.getini('drop_existing_test_db'))
     test_db.create()
     request.addfinalizer(test_db.drop)
     return test_db
+
+
+@pytest.fixture(scope='session')
+def test_engine(request, test_db):
+    """
+    A database Engine connected to the testing database.
+    """
+    engine = test_db.create_engine()
+
+    @request.addfinalizer
+    def cleanup():
+        engine.dispose()
+
+    return engine
 
 
 class TestingDB:
@@ -75,6 +89,12 @@ class TestingDB:
         yield conn
         conn.close()
         engine.dispose()
+
+    def create_engine(self):
+        """
+        Create an Engine for the test database.
+        """
+        return sqlalchemy.create_engine(self.url)
 
     def _to_url(self, url):
         # Ensure to create a copy actually
