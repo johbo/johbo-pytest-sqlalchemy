@@ -1,7 +1,11 @@
 import contextlib
+import logging
 
 import pytest
 import sqlalchemy
+
+
+log = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
@@ -38,6 +42,7 @@ def test_engine(request, test_db):
 
     @request.addfinalizer
     def cleanup():
+        log.info("Disposing test_engine")
         engine.dispose()
 
     return engine
@@ -59,26 +64,32 @@ class TestingDB:
         self._drop_existing = drop_existing
 
     @property
+    def database(self):
+        return self._db_url.database
+
+    @property
     def url(self):
         return self._db_url
 
     def create(self):
+        log.info("Creating test database %s", self.database)
         with self.connect() as conn:
             if self._drop_existing:
                 self._try_drop(conn)
-            conn.execute("CREATE DATABASE {}".format(self._db_url.database))
+            conn.execute("CREATE DATABASE {}".format(self.database))
 
     def _try_drop(self, conn):
         try:
-            conn.execute("DROP DATABASE {}".format(self._db_url.database))
+            conn.execute("DROP DATABASE {}".format(self.database))
         except sqlalchemy.exc.ProgrammingError:
             pass
         finally:
             conn.execute("ROLLBACK")
 
     def drop(self):
+        log.info("Dropping test database %s", self.database)
         with self.connect() as conn:
-            conn.execute("DROP DATABASE {}".format(self._db_url.database))
+            conn.execute("DROP DATABASE {}".format(self.database))
 
     @contextlib.contextmanager
     def connect(self):
@@ -94,7 +105,19 @@ class TestingDB:
         """
         Create an Engine for the test database.
         """
-        return sqlalchemy.create_engine(self.url)
+        log.info("Creating new Engine for %s", self.database)
+        return sqlalchemy.create_engine(
+            self.url,
+            # TODO: johbo: Without this pool I see trouble due to a left
+            # connection which prevents us dropping the database. Needs
+            # investigation how to solve this in a proper way. Based on the
+            # docs I would expect StaticPool to just work fine, but for some
+            # reason it does not.
+            poolclass=sqlalchemy.pool.AssertionPool,
+            echo=False,
+            echo_pool=False,
+            connect_args={'options': '-c timezone=utc'}
+        )
 
     def _to_url(self, url):
         # Ensure to create a copy actually
